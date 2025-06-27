@@ -11,13 +11,18 @@ function authorize(credentials, callback, emailDetails) {
   const { client_secret, client_id, redirect_uris } = credentials.installed;
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
-  if (fs.existsSync(TOKEN_PATH)) {
-    const token = fs.readFileSync(TOKEN_PATH);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client, emailDetails);
+  let token;
+  if (process.env.GOOGLE_TOKEN_BASE64) {
+    const decoded = Buffer.from(process.env.GOOGLE_TOKEN_BASE64, 'base64').toString('utf-8');
+    token = decoded;
+  } else if (fs.existsSync(TOKEN_PATH)) {
+    token = fs.readFileSync(TOKEN_PATH);
   } else {
-    getNewToken(oAuth2Client, callback, emailDetails);
+    return getNewToken(oAuth2Client, callback, emailDetails); // only for local
   }
+
+  oAuth2Client.setCredentials(JSON.parse(token));
+  callback(oAuth2Client, emailDetails);
 }
 
 function getNewToken(oAuth2Client, callback, emailDetails) {
@@ -50,6 +55,11 @@ function getMimeType(filename) {
     case '.svg': return 'image/svg+xml';
     case '.jpeg':
     case '.jpg': return 'image/jpeg';
+    case '.pdf': return 'application/pdf';
+    case '.doc':
+    case '.docx': return 'application/msword';
+    case '.ppt':
+    case '.pptx': return 'application/vnd.ms-powerpoint';
     default: return 'application/octet-stream';
   }
 }
