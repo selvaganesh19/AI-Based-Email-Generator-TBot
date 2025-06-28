@@ -1,166 +1,110 @@
-# 📧 Telegram AI Email Bot (Cohere + Gmail API)
+# 📬 Telegram AI Email Bot
 
-A Telegram bot that writes, schedules, and sends emails using **Cohere AI** for content generation and **Gmail API** for delivery.
-
----
-
-## 🚀 Features
-
-✅ AI-generated emails (role, tone, topic)  
-✅ Gmail API integration (OAuth2)  
-✅ File attachment support  
-✅ Email scheduling (`now` or future time)  
-✅ `/remindme` command for sending reminders  
-✅ Inline UX with tone and confirmation buttons  
-✅ Render-ready deployment with secure base64 credentials  
+A powerful Telegram bot to generate, schedule, and send emails using **Cohere AI** and **Gmail API**, complete with file attachment support, reminders, and Render deployment support.
 
 ---
 
-## 📁 File Structure
+## ✨ Features
+
+- 🤖 AI-generated emails (based on role, tone, topic)
+- 📎 Upload and attach files directly in chat
+- ⏰ Schedule emails or send them instantly
+- 🔔 `/remindme` command to email yourself reminders
+- 🛡 Gmail API via OAuth2 with secure Base64 credentials
+- 🚀 Deployable on [Render](https://render.com)
+
+---
+
+## 📁 Project Structure
 
 Email-Chat-Bot/
 ├── bot.js # Telegram bot logic
-├── gmail.js # Gmail + Cohere integration
-├── downloads/ # Temporary attachment storage
-├── .env # Local environment variables
+├── gmail.js # Gmail + AI integration
+├── downloads/ # Temp storage for file uploads
+├── .env # Environment config (local use)
 └── README.md # This file
+
 
 ---
 
-## 🧪 Local Development
+## 🧪 Local Setup
 
-### 1. Clone the Repo
-
+### 1. Clone and Install
 ```bash
-git clone https://github.com/your-username/Email-Chat-Bot.git
+git clone https://github.com/YOUR_USERNAME/Email-Chat-Bot.git
 cd Email-Chat-Bot
-
-2. Install Dependencies
-
 npm install
 
-3. Setup .env
-Create a .env file with:
+2. Create .env File
 
 TELEGRAM_TOKEN=your_telegram_bot_token
 COHERE_API_KEY=your_cohere_api_key
 
-4. Setup Gmail API
+3. Gmail API Setup
 
-Go to Google Cloud Console
+  # Go to Google Cloud Console
 
-Enable Gmail API under APIs & Services
+  # Enable Gmail API
 
-Create OAuth 2.0 Credentials (Desktop App)
+  # Create OAuth 2.0 credentials (Desktop App)
 
-Download credentials.json and place it in the root folder
+  # Download credentials.json into root folder
 
-Then run once to authorize Gmail:
+  # Run once to authenticate:
+        node bot.js
 
-node bot.js
-This will open a URL and ask for an auth code → saves token.json locally.
-
-☁️ Render Deployment (No .json Uploads Needed)
-1. Convert Credential Files to Base64
+☁️ Deploy on Render
+1. Convert JSON files to base64
 
 base64 credentials.json > credentials.txt
 base64 token.json > token.txt
-Copy the contents of those .txt files.
 
 2. Set Render Environment Variables
-In your Render Web Service, add the following under "Environment":
 
-Key	Value (Paste contents)
-TELEGRAM_TOKEN	Your Telegram Bot Token
-COHERE_API_KEY	Your Cohere API Key
-CREDENTIALS_JSON_BASE64	Output of credentials.txt
-TOKEN_JSON_BASE64	Output of token.txt
+| Key                       | Value                        |
+| ------------------------- | ---------------------------- |
+| `TELEGRAM_TOKEN`          | Your Telegram Bot Token      |
+| `COHERE_API_KEY`          | Your Cohere API Key          |
+| `CREDENTIALS_JSON_BASE64` | Content of `credentials.txt` |
+| `TOKEN_JSON_BASE64`       | Content of `token.txt`       |
 
 3. Start Command
-Set this in Render Start Command:
 
 node bot.js
-Render will now decode and create the credentials.json and token.json files automatically at runtime using this snippet inside bot.js:
 
-if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
-  fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
-}
-if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
-  fs.writeFileSync(credentialsPath, Buffer.from(process.env.CREDENTIALS_JSON_BASE64, 'base64'));
-}
-✉️ Bot Commands
-/start
-Begin writing an AI-generated email. The bot will ask:
+📌 Bot Commands
+/start – Compose AI-powered Email
+Role → Tone → Topic → Subject → Recipient → Files → Send Time
 
-What’s your role? (e.g., Student, Developer)
+/remindme – Schedule a Reminder Email
+🛠 Tech Stack
+🧠 Cohere AI – AI email writing
 
-Pick tone: Formal / Casual
+📧 Gmail API
 
-Topic of the email
+🤖 node-telegram-bot-api
 
-Subject (or type auto)
+☁️ Render
 
-Recipient email
+🔐 Security
+No JSON files in GitHub
 
-Attach files (optional)
+Gmail token & credentials injected via Base64 environment variables
 
-Send now or schedule
-
-/remindme
-Schedule a personal reminder email to yourself.
-
-📦 Example Usage
-Step-by-step:
-
-/start
-
-🧑 Bot asks for your role → Student
-
-✉️ Choose tone → Formal
-
-📝 Enter topic → Internship Application
-
-📌 Enter subject → auto
-
-📬 Recipient email → example@gmail.com
-
-📎 Upload files (or skip)
-
-📅 Enter send time → now or 2025-07-01 12:00
-
-✅ Confirm email → Bot sends via Gmail!
-
-📚 Powered By
-Cohere AI – For generating email text (command model)
-
-Gmail API – For sending emails (with OAuth2)
-
-node-telegram-bot-api – Telegram Bot wrapper
-
-Render – For hosting the Node.js bot
-
-🛡 Security
-No .json secrets committed to GitHub
-
-All credentials are injected via Render Env Vars using Base64
-
-OAuth2 token never exposed publicly
+OAuth2 used for secure Gmail access
 
 📄 License
-MIT © 2025 [Your Name]
+MIT © 2025 [selvaganesh19]
 
-🙋 Need Help?
-Cohere API Docs
+🙋 Support
+Open an issue or reach out on Telegram if you need help!
 
-Gmail API Docs
-
-Render Docs
-
-If you face issues, feel free to open a GitHub Issue or ping me.
 
 ---
 
-Let me know if you’d like me to:
-- Include a `render.yaml` for auto-deploy
-- Add badges (e.g. Telegram, Render deploy)
-- Fill in your real GitHub repo name and author details.
+### ✅ What You Should Do:
+- Replace `YOUR_USERNAME` with your actual GitHub username (`selvaganesh19`).
+- Update the author name in the license section.
+
+Let me know if you'd like me to generate a `render.yaml` or GitHub badges for your project.
+
