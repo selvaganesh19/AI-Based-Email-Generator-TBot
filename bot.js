@@ -4,9 +4,10 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const schedule = require('node-schedule');
+const express = require('express');
 const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
 
-// Handle base64 token and credentials
+// Decode and save token/credentials from base64 if not present
 const tokenPath = path.join(__dirname, 'token.json');
 const credentialsPath = path.join(__dirname, 'credentials.json');
 
@@ -14,13 +15,11 @@ if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
   console.log('✅ token.json created from env var');
 }
-
 if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
   fs.writeFileSync(credentialsPath, Buffer.from(process.env.CREDENTIALS_JSON_BASE64, 'base64'));
   console.log('✅ credentials.json created from env var');
 }
 
-// Telegram Bot Init
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 const sessions = {};
 
@@ -30,21 +29,32 @@ const ensureTempDir = () => {
   return dir;
 };
 
-// /start
+// /start - starts a new email session
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
+  if (sessions[chatId]) {
+    bot.sendMessage(chatId, '⚠️ You already started a session. Type /cancel to restart.');
+    return;
+  }
   sessions[chatId] = { mode: 'email', step: 0, data: {}, attachments: [] };
   bot.sendMessage(chatId, '👋 What is your role (e.g., Developer, Student)?');
 });
 
-// /remindme
+// /cancel - cancels current session
+bot.onText(/\/cancel/, (msg) => {
+  const chatId = msg.chat.id;
+  delete sessions[chatId];
+  bot.sendMessage(chatId, '❌ Session cancelled. Type /start to begin again.');
+});
+
+// /remindme - starts reminder flow
 bot.onText(/\/remindme/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'reminder', step: 0, data: {} };
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
-// Inline replies
+// Inline button handler
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -89,14 +99,14 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// Message handler
+// Main message flow
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
-  // Reminder Flow
+  // Reminder mode
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -122,7 +132,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Attachment Flow
+  // Handle attachments
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -149,7 +159,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Email Flow
+  // Email generation flow
   switch (session.step) {
     case 0:
       session.data.role = text;
@@ -221,12 +231,8 @@ bot.on('message', async (msg) => {
   }
 });
 
-// 🌐 Render Keep-Alive Server
-const express = require('express');
+// 🌐 Render keep-alive endpoint
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
-app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
