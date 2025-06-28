@@ -10,6 +10,7 @@ const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
 const tokenPath = path.join(__dirname, 'token.json');
 const credentialsPath = path.join(__dirname, 'credentials.json');
 
+// Decode and write token.json from base64 if not already present
 if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
   console.log('✅ token.json created from env var');
@@ -22,12 +23,14 @@ if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 const sessions = {};
 
+// Utility to ensure download folder exists
 const ensureTempDir = () => {
   const dir = path.join(__dirname, 'downloads');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir);
   return dir;
 };
 
+// /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   if (sessions[chatId]) {
@@ -38,18 +41,21 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(chatId, '👤 What is your name?');
 });
 
+// /cancel command
 bot.onText(/\/cancel/, (msg) => {
   const chatId = msg.chat.id;
   delete sessions[chatId];
   bot.sendMessage(chatId, '❌ Session cancelled. Type /start to begin again.');
 });
 
+// /remindme command
 bot.onText(/\/remindme/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'reminder', step: 0, data: {} };
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
+// Inline keyboard responses
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -73,7 +79,7 @@ bot.on('callback_query', async (query) => {
     const { data, finalSubject, generatedEmail, attachments, sendTime, tone, topic } = session;
     if (sendTime === 'now') {
       sendGmail(data.recipient, finalSubject, generatedEmail, attachments, tone, topic);
-      bot.sendMessage(chatId, '✅ Email sent!');
+      bot.sendMessage(chatId, `✅ Email sent to: ${data.recipient}`);
     } else {
       const date = new Date(sendTime);
       if (isNaN(date.getTime())) {
@@ -94,12 +100,14 @@ bot.on('callback_query', async (query) => {
   }
 });
 
+// Main bot logic
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
+  // Reminder Flow
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -125,6 +133,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  // Handle file uploads
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -151,6 +160,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  // Email flow steps
   switch (session.step) {
     case 0:
       session.data.senderName = text || 'Anonymous Sender';
@@ -233,7 +243,16 @@ bot.on('message', async (msg) => {
   }
 });
 
+// Express server and healthcheck
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
+app.get('/health', (_, res) => res.send('✅ Bot is healthy'));
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
+
+// Self-ping Render URL every 5 minutes
+if (process.env.RENDER_EXTERNAL_URL) {
+  setInterval(() => {
+    axios.get(process.env.RENDER_EXTERNAL_URL + '/health').catch(() => {});
+  }, 5 * 60 * 1000);
+}
