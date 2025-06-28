@@ -180,7 +180,7 @@ bot.on('message', async (msg) => {
     case 4:
       session.data.subject = text;
       session.step++;
-      bot.sendMessage(chatId, '📬 Enter recipient's email address:');
+      bot.sendMessage(chatId, "📬 Enter recipient's email address:");
       break;
 
     case 5:
