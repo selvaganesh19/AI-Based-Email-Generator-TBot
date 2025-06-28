@@ -16,7 +16,6 @@ if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
 
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const schedule = require('node-schedule');
