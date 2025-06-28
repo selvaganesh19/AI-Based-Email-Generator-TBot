@@ -1,3 +1,4 @@
+// === Base64 Credentials Bootstrap ===
 const fs = require('fs');
 const path = require('path');
 
@@ -8,12 +9,12 @@ if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
   console.log('✅ token.json created from env var');
 }
-
 if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
   fs.writeFileSync(credentialsPath, Buffer.from(process.env.CREDENTIALS_JSON_BASE64, 'base64'));
   console.log('✅ credentials.json created from env var');
 }
 
+// === Dependencies and Setup ===
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -29,6 +30,7 @@ const ensureTempDir = () => {
   return dir;
 };
 
+// === Start and Reminder Commands ===
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'email', step: 0, data: {}, attachments: [] };
@@ -41,6 +43,7 @@ bot.onText(/\/remindme/, (msg) => {
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
+// === Inline Button Handler ===
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -85,12 +88,14 @@ bot.on('callback_query', async (query) => {
   }
 });
 
+// === Main Message Handler ===
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
+  // Reminder flow
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -116,6 +121,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  // Handle attachments
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -142,6 +148,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  // Step-based message flow
   switch (session.step) {
     case 0:
       session.data.role = text;
@@ -209,7 +216,14 @@ bot.on('message', async (msg) => {
         console.error('Email generation error:', err);
         bot.sendMessage(chatId, '❌ Failed to generate email. Try again.');
       }
-
       break;
   }
 });
+
+// === Express Server for Render (health check) ===
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (_, res) => res.send('🤖 Telegram AI Email Bot is running!'));
+app.listen(PORT, () => console.log(`🌐 Server listening on port ${PORT}`));
