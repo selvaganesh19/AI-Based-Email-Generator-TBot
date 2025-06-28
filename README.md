@@ -36,21 +36,17 @@ git clone https://github.com/your-username/Email-Chat-Bot.git
 cd Email-Chat-Bot
 
 2. Install Dependencies
-bash
-Copy
-Edit
+
 npm install
 
 3. Setup .env
 Create a .env file with:
 
-env
-Copy
-Edit
 TELEGRAM_TOKEN=your_telegram_bot_token
 COHERE_API_KEY=your_cohere_api_key
 
 4. Setup Gmail API
+
 Go to Google Cloud Console
 
 Enable Gmail API under APIs & Services
@@ -61,17 +57,12 @@ Download credentials.json and place it in the root folder
 
 Then run once to authorize Gmail:
 
-bash
-Copy
-Edit
 node bot.js
 This will open a URL and ask for an auth code → saves token.json locally.
 
 ☁️ Render Deployment (No .json Uploads Needed)
 1. Convert Credential Files to Base64
-bash
-Copy
-Edit
+
 base64 credentials.json > credentials.txt
 base64 token.json > token.txt
 Copy the contents of those .txt files.
@@ -88,15 +79,9 @@ TOKEN_JSON_BASE64	Output of token.txt
 3. Start Command
 Set this in Render Start Command:
 
-bash
-Copy
-Edit
 node bot.js
 Render will now decode and create the credentials.json and token.json files automatically at runtime using this snippet inside bot.js:
 
-js
-Copy
-Edit
 if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
 }
@@ -172,10 +157,6 @@ Gmail API Docs
 Render Docs
 
 If you face issues, feel free to open a GitHub Issue or ping me.
-
-yaml
-Copy
-Edit
 
 ---
 
