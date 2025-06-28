@@ -68,9 +68,9 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, '📅 When should I send the email? Type `now` or a time like `2025-07-01 12:00`');
   }
 
-  if ((data === 'Formal' || data === 'Casual') && session.step === 1) {
+  if ((data === 'Formal' || data === 'Casual') && session.step === 2) {
     session.data.tone = data;
-    session.step = 2;
+    session.step = 3;
     bot.sendMessage(chatId, `📝 What is the topic of the email? (Tone: ${data})`);
   }
 
@@ -164,6 +164,12 @@ bot.on('message', async (msg) => {
     case 0:
       session.data.role = text;
       session.step = 1;
+      bot.sendMessage(chatId, '👤 Please enter your full name:');
+      break;
+
+    case 1:
+      session.data.name = text;
+      session.step = 2;
       bot.sendMessage(chatId, '✉️ Choose tone:', {
         reply_markup: {
           inline_keyboard: [
@@ -174,19 +180,19 @@ bot.on('message', async (msg) => {
       });
       break;
 
-    case 2:
+    case 3:
       session.data.topic = text;
       session.step++;
       bot.sendMessage(chatId, '📌 Enter subject (or type `auto`):');
       break;
 
-    case 3:
+    case 4:
       session.data.subject = text;
       session.step++;
       bot.sendMessage(chatId, '📬 Enter recipient\'s email address:');
       break;
 
-    case 4:
+    case 5:
       session.data.recipient = text;
       session.step++;
       bot.sendMessage(chatId, '📎 Upload attachments (optional). Tap *Done* when finished.', {
@@ -198,7 +204,7 @@ bot.on('message', async (msg) => {
       session.awaitingAttachments = true;
       break;
 
-    case 6:
+    case 7:
       session.sendTime = text.toLowerCase();
       const finalSubject = session.data.subject === 'auto' || !session.data.subject
         ? recommendSubject(session.data.topic, session.data.tone)
@@ -208,11 +214,19 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, '✍️ Generating email, please wait...');
 
       try {
-        const emailText = await generateEmail({ ...session.data, subject: finalSubject });
-        session.generatedEmail = emailText;
+        let rawEmail = await generateEmail({ ...session.data, subject: finalSubject });
+
+        // Insert greeting and signature
+        const recipientName = session.data.recipient.split('@')[0];
+        const greeting = `Dear ${recipientName.charAt(0).toUpperCase() + recipientName.slice(1)},\n`;
+        const signature = `\n\nSincerely,\n${session.data.name}\n${session.data.role}`;
+
+        rawEmail = `${greeting}\n${rawEmail}${signature}`;
+
+        session.generatedEmail = rawEmail;
         session.finalSubject = finalSubject;
 
-        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${emailText}`;
+        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${rawEmail}`;
         await bot.sendMessage(chatId, preview, { parse_mode: 'Markdown' });
 
         bot.sendMessage(chatId, '✅ Confirm sending email?', {
@@ -236,4 +250,3 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
-
