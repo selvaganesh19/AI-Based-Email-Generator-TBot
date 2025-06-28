@@ -7,9 +7,6 @@ const schedule = require('node-schedule');
 const express = require('express');
 const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
 
-const escapeMarkdownV2 = (text) => text.replace(/([_*[\]()~`>#+\-=|{}.!\\])/g, '\\$1');
-
-// Decode and save token/credentials from base64 if not present
 const tokenPath = path.join(__dirname, 'token.json');
 const credentialsPath = path.join(__dirname, 'credentials.json');
 
@@ -31,7 +28,6 @@ const ensureTempDir = () => {
   return dir;
 };
 
-// /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   if (sessions[chatId]) {
@@ -39,24 +35,21 @@ bot.onText(/\/start/, (msg) => {
     return;
   }
   sessions[chatId] = { mode: 'email', step: 0, data: {}, attachments: [] };
-  bot.sendMessage(chatId, '👋 What is your role (e.g., Developer, Student)?');
+  bot.sendMessage(chatId, '👤 What is your name?');
 });
 
-// /cancel
 bot.onText(/\/cancel/, (msg) => {
   const chatId = msg.chat.id;
   delete sessions[chatId];
   bot.sendMessage(chatId, '❌ Session cancelled. Type /start to begin again.');
 });
 
-// /remindme
 bot.onText(/\/remindme/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'reminder', step: 0, data: {} };
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
-// Callback
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -70,9 +63,9 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, '📅 When should I send the email? Type `now` or a time like `2025-07-01 12:00`');
   }
 
-  if ((data === 'Formal' || data === 'Casual') && session.step === 1) {
+  if ((data === 'Formal' || data === 'Casual') && session.step === 2) {
     session.data.tone = data;
-    session.step = 2;
+    session.step++;
     bot.sendMessage(chatId, `📝 What is the topic of the email? (Tone: ${data})`);
   }
 
@@ -101,14 +94,12 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// Main flow
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
-  // Reminder
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -134,7 +125,6 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Attachments
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -161,11 +151,16 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Email flow
   switch (session.step) {
     case 0:
+      session.data.senderName = text;
+      session.step++;
+      bot.sendMessage(chatId, '💼 What is your title or role (e.g., Developer)?');
+      break;
+
+    case 1:
       session.data.role = text;
-      session.step = 1;
+      session.step++;
       bot.sendMessage(chatId, '✉️ Choose tone:', {
         reply_markup: {
           inline_keyboard: [
@@ -176,19 +171,19 @@ bot.on('message', async (msg) => {
       });
       break;
 
-    case 2:
+    case 3:
       session.data.topic = text;
       session.step++;
       bot.sendMessage(chatId, '📌 Enter subject (or type `auto`):');
       break;
 
-    case 3:
+    case 4:
       session.data.subject = text;
       session.step++;
       bot.sendMessage(chatId, '📬 Enter recipient\'s email address:');
       break;
 
-    case 4:
+    case 5:
       session.data.recipient = text;
       session.step++;
       bot.sendMessage(chatId, '📎 Upload attachments (optional). Tap *Done* when finished.', {
@@ -200,7 +195,7 @@ bot.on('message', async (msg) => {
       session.awaitingAttachments = true;
       break;
 
-    case 6:
+    case 7:
       session.sendTime = text.toLowerCase();
       const finalSubject = session.data.subject === 'auto' || !session.data.subject
         ? recommendSubject(session.data.topic, session.data.tone)
@@ -211,11 +206,12 @@ bot.on('message', async (msg) => {
 
       try {
         const emailText = await generateEmail({ ...session.data, subject: finalSubject });
-        session.generatedEmail = emailText;
+        const signature = `\n\nSincerely,\n${session.data.senderName}\n${session.data.role}`;
+        session.generatedEmail = emailText + signature;
         session.finalSubject = finalSubject;
 
-        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${emailText}`;
-        await bot.sendMessage(chatId, escapeMarkdownV2(preview), { parse_mode: 'MarkdownV2' });
+        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${session.generatedEmail}`;
+        await bot.sendMessage(chatId, preview, { parse_mode: 'Markdown' });
 
         bot.sendMessage(chatId, '✅ Confirm sending email?', {
           reply_markup: {
@@ -233,7 +229,6 @@ bot.on('message', async (msg) => {
   }
 });
 
-// 🌐 Server
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
