@@ -1,4 +1,3 @@
-// gmail.js
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
@@ -11,18 +10,13 @@ function authorize(credentials, callback, emailDetails) {
   const { client_secret, client_id, redirect_uris } = credentials.installed;
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
-  let token;
-  if (process.env.GOOGLE_TOKEN_BASE64) {
-    const decoded = Buffer.from(process.env.GOOGLE_TOKEN_BASE64, 'base64').toString('utf-8');
-    token = decoded;
-  } else if (fs.existsSync(TOKEN_PATH)) {
-    token = fs.readFileSync(TOKEN_PATH);
+  if (fs.existsSync(TOKEN_PATH)) {
+    const token = fs.readFileSync(TOKEN_PATH);
+    oAuth2Client.setCredentials(JSON.parse(token));
+    callback(oAuth2Client, emailDetails);
   } else {
-    return getNewToken(oAuth2Client, callback, emailDetails); // only for local
+    getNewToken(oAuth2Client, callback, emailDetails);
   }
-
-  oAuth2Client.setCredentials(JSON.parse(token));
-  callback(oAuth2Client, emailDetails);
 }
 
 function getNewToken(oAuth2Client, callback, emailDetails) {
@@ -56,10 +50,7 @@ function getMimeType(filename) {
     case '.jpeg':
     case '.jpg': return 'image/jpeg';
     case '.pdf': return 'application/pdf';
-    case '.doc':
-    case '.docx': return 'application/msword';
-    case '.ppt':
-    case '.pptx': return 'application/vnd.ms-powerpoint';
+    case '.docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     default: return 'application/octet-stream';
   }
 }
@@ -68,12 +59,13 @@ function recommendSubject(topic, tone) {
   const suggestions = {
     Formal: `Regarding: ${topic}`,
     Casual: `Let's talk about ${topic}`,
+    Friendly: `A quick note about ${topic}`,
   };
   return suggestions[tone] || `Subject: ${topic}`;
 }
 
 function sendGmail(recipient, subject, body, attachments = [], tone = 'Formal', topic = '') {
-  if (!subject || subject.trim() === '') {
+  if (!subject || subject.trim().toLowerCase() === 'auto') {
     subject = recommendSubject(topic, tone);
     console.log(`ℹ️ Using recommended subject: ${subject}`);
   }
@@ -90,24 +82,22 @@ function sendGmail(recipient, subject, body, attachments = [], tone = 'Formal', 
     body,
   ];
 
-  if (attachments.length > 0) {
-    attachments.forEach((filePath) => {
-      try {
-        const fileData = fs.readFileSync(filePath).toString('base64');
-        const filename = path.basename(filePath);
-        const mimeType = getMimeType(filename);
-        messageParts.push(
-          `--${boundary}`,
-          `Content-Type: ${mimeType}; name="${filename}"`,
-          'Content-Transfer-Encoding: base64',
-          `Content-Disposition: attachment; filename="${filename}"\n`,
-          fileData
-        );
-      } catch (err) {
-        console.error(`⚠️ Error attaching file ${filePath}:`, err.message);
-      }
-    });
-  }
+  attachments.forEach((filePath) => {
+    try {
+      const fileData = fs.readFileSync(filePath).toString('base64');
+      const filename = path.basename(filePath);
+      const mimeType = getMimeType(filename);
+      messageParts.push(
+        `--${boundary}`,
+        `Content-Type: ${mimeType}; name="${filename}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${filename}"\n`,
+        fileData
+      );
+    } catch (err) {
+      console.error(`⚠️ Error attaching file ${filePath}:`, err.message);
+    }
+  });
 
   messageParts.push(`--${boundary}--`);
   const fullMessage = messageParts.join('\n');
@@ -129,4 +119,49 @@ function sendGmail(recipient, subject, body, attachments = [], tone = 'Formal', 
   }, fullMessage);
 }
 
-module.exports = { sendGmail, recommendSubject };
+async function generateEmail({ role, tone, topic, subject }) {
+  if (!process.env.COHERE_API_KEY) {
+    throw new Error("❌ COHERE_API_KEY is missing in .env file");
+  }
+
+  if (!subject || subject.trim().toLowerCase() === 'auto') {
+    subject = recommendSubject(topic, tone);
+  }
+
+  const prompt = `Write a ${tone} email from a ${role} about: ${topic}. Subject: "${subject}".`;
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+      const axios = require('axios');
+      const response = await axios.post('https://api.cohere.ai/v1/generate', {
+        model: 'command',
+        prompt,
+        max_tokens: 300,
+        temperature: 0.7
+      }, {
+        headers: {
+          Authorization: `Bearer ${process.env.COHERE_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      const text = response?.data?.generations?.[0]?.text?.trim();
+      if (!text) throw new Error("Empty or invalid response from Cohere API");
+
+      return text;
+    } catch (err) {
+      console.error(`⚠️ Cohere API error (Attempt ${attempt}):`, err.message || err.toString());
+      if (attempt === 2) {
+        throw new Error('❌ Cohere timeout or API failure after retries');
+      }
+    }
+  }
+}
+
+module.exports = { sendGmail, recommendSubject, generateEmail };
