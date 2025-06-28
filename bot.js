@@ -1,3 +1,19 @@
+const fs = require('fs');
+const path = require('path');
+
+const tokenPath = path.join(__dirname, 'token.json');
+const credentialsPath = path.join(__dirname, 'credentials.json');
+
+if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
+  fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
+  console.log('✅ token.json created from env var');
+}
+
+if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
+  fs.writeFileSync(credentialsPath, Buffer.from(process.env.CREDENTIALS_JSON_BASE64, 'base64'));
+  console.log('✅ credentials.json created from env var');
+}
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const fs = require('fs');
