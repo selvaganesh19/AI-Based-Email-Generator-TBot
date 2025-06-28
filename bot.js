@@ -1,7 +1,12 @@
-// === Base64 Credentials Bootstrap ===
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
+const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
+const schedule = require('node-schedule');
+const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
 
+// Handle base64 token and credentials
 const tokenPath = path.join(__dirname, 'token.json');
 const credentialsPath = path.join(__dirname, 'credentials.json');
 
@@ -9,18 +14,13 @@ if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
   console.log('✅ token.json created from env var');
 }
+
 if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
   fs.writeFileSync(credentialsPath, Buffer.from(process.env.CREDENTIALS_JSON_BASE64, 'base64'));
   console.log('✅ credentials.json created from env var');
 }
 
-// === Dependencies and Setup ===
-require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
-const schedule = require('node-schedule');
-const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
-
+// Telegram Bot Init
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 const sessions = {};
 
@@ -30,20 +30,21 @@ const ensureTempDir = () => {
   return dir;
 };
 
-// === Start and Reminder Commands ===
+// /start
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'email', step: 0, data: {}, attachments: [] };
   bot.sendMessage(chatId, '👋 What is your role (e.g., Developer, Student)?');
 });
 
+// /remindme
 bot.onText(/\/remindme/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'reminder', step: 0, data: {} };
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
-// === Inline Button Handler ===
+// Inline replies
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -88,14 +89,14 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// === Main Message Handler ===
+// Message handler
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
-  // Reminder flow
+  // Reminder Flow
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -121,7 +122,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Handle attachments
+  // Attachment Flow
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -148,7 +149,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  // Step-based message flow
+  // Email Flow
   switch (session.step) {
     case 0:
       session.data.role = text;
@@ -220,10 +221,12 @@ bot.on('message', async (msg) => {
   }
 });
 
-// === Express Server for Render (health check) ===
+// 🌐 Render Keep-Alive Server
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (_, res) => res.send('🤖 Telegram AI Email Bot is running!'));
-app.listen(PORT, () => console.log(`🌐 Server listening on port ${PORT}`));
+app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
+app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+});
