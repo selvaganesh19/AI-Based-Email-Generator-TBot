@@ -2,6 +2,8 @@
 
 A powerful Telegram bot to generate, schedule, and send emails using **Cohere AI** and **Gmail API**, complete with file attachment support, reminders, and Render deployment support.
 
+👉 **Try the bot on Telegram**: [@email_chatbot](https://t.me/email_chatbot)
+
 ---
 
 ## ✨ Features
