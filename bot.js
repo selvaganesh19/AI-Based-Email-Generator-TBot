@@ -65,7 +65,7 @@ bot.on('callback_query', async (query) => {
 
   if ((data === 'Formal' || data === 'Casual') && session.step === 2) {
     session.data.tone = data;
-    session.step++;
+    session.step = 3;
     bot.sendMessage(chatId, `📝 What is the topic of the email? (Tone: ${data})`);
   }
 
@@ -153,14 +153,14 @@ bot.on('message', async (msg) => {
 
   switch (session.step) {
     case 0:
-      session.data.senderName = text;
-      session.step++;
-      bot.sendMessage(chatId, '💼 What is your title or role (e.g., Developer)?');
+      session.data.senderName = text || 'Anonymous Sender';
+      session.step = 1;
+      bot.sendMessage(chatId, '👨‍💼 What is your role (e.g., Developer, Student)?');
       break;
 
     case 1:
       session.data.role = text;
-      session.step++;
+      session.step = 2;
       bot.sendMessage(chatId, '✉️ Choose tone:', {
         reply_markup: {
           inline_keyboard: [
@@ -180,7 +180,7 @@ bot.on('message', async (msg) => {
     case 4:
       session.data.subject = text;
       session.step++;
-      bot.sendMessage(chatId, '📬 Enter recipient\'s email address:');
+      bot.sendMessage(chatId, '📬 Enter recipient's email address:');
       break;
 
     case 5:
@@ -205,12 +205,16 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, '✍️ Generating email, please wait...');
 
       try {
-        const emailText = await generateEmail({ ...session.data, subject: finalSubject });
-        const signature = `\n\nSincerely,\n${session.data.senderName}\n${session.data.role}`;
-        session.generatedEmail = emailText + signature;
+        const rawEmail = await generateEmail({ ...session.data, subject: finalSubject });
+        const senderName = session.data.senderName || 'Anonymous Sender';
+        const senderRole = session.data.role || '';
+
+        const emailText = `Dear ${session.data.recipient},\n\n${rawEmail}\n\nSincerely,\n${senderName}${senderRole ? `\n${senderRole}` : ''}`.trim();
+
+        session.generatedEmail = emailText;
         session.finalSubject = finalSubject;
 
-        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${session.generatedEmail}`;
+        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${emailText}`;
         await bot.sendMessage(chatId, preview, { parse_mode: 'Markdown' });
 
         bot.sendMessage(chatId, '✅ Confirm sending email?', {
