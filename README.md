@@ -32,7 +32,7 @@ Email-Chat-Bot/
 ## 🧪 Local Setup
 
 ### 1. Clone and Install
-```bash
+
 git clone https://github.com/YOUR_USERNAME/Email-Chat-Bot.git
 cd Email-Chat-Bot
 npm install
@@ -96,7 +96,8 @@ Gmail token & credentials injected via Base64 environment variables
 OAuth2 used for secure Gmail access
 
 📄 License
-MIT © 2025 [selvaganesh19]
+
+This project is licensed under the [MIT License](LICENSE).
 
 🙋 Support
 Open an issue or reach out on Telegram if you need help!
