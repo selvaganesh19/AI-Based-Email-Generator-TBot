@@ -7,17 +7,10 @@ const schedule = require('node-schedule');
 const express = require('express');
 const { sendGmail, recommendSubject, generateEmail } = require('./gmail');
 
-<<<<<<< HEAD
 // Decode and save token/credentials from base64 if not present
 const tokenPath = path.join(__dirname, 'token.json');
 const credentialsPath = path.join(__dirname, 'credentials.json');
 
-=======
-const tokenPath = path.join(__dirname, 'token.json');
-const credentialsPath = path.join(__dirname, 'credentials.json');
-
-// Decode and write token.json from base64 if not already present
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 if (process.env.TOKEN_JSON_BASE64 && !fs.existsSync(tokenPath)) {
   fs.writeFileSync(tokenPath, Buffer.from(process.env.TOKEN_JSON_BASE64, 'base64'));
   console.log('✅ token.json created from env var');
@@ -30,21 +23,13 @@ if (process.env.CREDENTIALS_JSON_BASE64 && !fs.existsSync(credentialsPath)) {
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true });
 const sessions = {};
 
-<<<<<<< HEAD
-=======
-// Utility to ensure download folder exists
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 const ensureTempDir = () => {
   const dir = path.join(__dirname, 'downloads');
   if (!fs.existsSync(dir)) fs.mkdirSync(dir);
   return dir;
 };
 
-<<<<<<< HEAD
 // /start - starts a new email session
-=======
-// /start command
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   if (sessions[chatId]) {
@@ -52,39 +37,24 @@ bot.onText(/\/start/, (msg) => {
     return;
   }
   sessions[chatId] = { mode: 'email', step: 0, data: {}, attachments: [] };
-<<<<<<< HEAD
   bot.sendMessage(chatId, '👋 What is your role (e.g., Developer, Student)?');
 });
 
 // /cancel - cancels current session
-=======
-  bot.sendMessage(chatId, '👤 What is your name?');
-});
-
-// /cancel command
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 bot.onText(/\/cancel/, (msg) => {
   const chatId = msg.chat.id;
   delete sessions[chatId];
   bot.sendMessage(chatId, '❌ Session cancelled. Type /start to begin again.');
 });
 
-<<<<<<< HEAD
 // /remindme - starts reminder flow
-=======
-// /remindme command
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 bot.onText(/\/remindme/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { mode: 'reminder', step: 0, data: {} };
   bot.sendMessage(chatId, '🔔 What should I remind you about?');
 });
 
-<<<<<<< HEAD
 // Inline button handler
-=======
-// Inline keyboard responses
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = sessions[chatId];
@@ -108,11 +78,7 @@ bot.on('callback_query', async (query) => {
     const { data, finalSubject, generatedEmail, attachments, sendTime, tone, topic } = session;
     if (sendTime === 'now') {
       sendGmail(data.recipient, finalSubject, generatedEmail, attachments, tone, topic);
-<<<<<<< HEAD
       bot.sendMessage(chatId, '✅ Email sent!');
-=======
-      bot.sendMessage(chatId, `✅ Email sent to: ${data.recipient}`);
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
     } else {
       const date = new Date(sendTime);
       if (isNaN(date.getTime())) {
@@ -133,22 +99,14 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-<<<<<<< HEAD
 // Main message flow
-=======
-// Main bot logic
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim();
   const session = sessions[chatId];
   if (!session || msg.data) return;
 
-<<<<<<< HEAD
   // Reminder mode
-=======
-  // Reminder Flow
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
   if (session.mode === 'reminder') {
     if (session.step === 0) {
       session.data.text = text;
@@ -174,11 +132,7 @@ bot.on('message', async (msg) => {
     return;
   }
 
-<<<<<<< HEAD
   // Handle attachments
-=======
-  // Handle file uploads
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
   if (session.awaitingAttachments) {
     if (msg.document || msg.photo) {
       const fileId = msg.document?.file_id || msg.photo?.at(-1)?.file_id;
@@ -205,7 +159,6 @@ bot.on('message', async (msg) => {
     return;
   }
 
-<<<<<<< HEAD
   // Email generation flow
   switch (session.step) {
     case 0:
@@ -216,18 +169,6 @@ bot.on('message', async (msg) => {
 
     case 1:
       session.data.name = text;
-=======
-  // Email flow steps
-  switch (session.step) {
-    case 0:
-      session.data.senderName = text || 'Anonymous Sender';
-      session.step = 1;
-      bot.sendMessage(chatId, '👨‍💼 What is your role (e.g., Developer, Student)?');
-      break;
-
-    case 1:
-      session.data.role = text;
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
       session.step = 2;
       bot.sendMessage(chatId, '✉️ Choose tone:', {
         reply_markup: {
@@ -248,11 +189,7 @@ bot.on('message', async (msg) => {
     case 4:
       session.data.subject = text;
       session.step++;
-<<<<<<< HEAD
       bot.sendMessage(chatId, '📬 Enter recipient\'s email address:');
-=======
-      bot.sendMessage(chatId, "📬 Enter recipient's email address:");
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
       break;
 
     case 5:
@@ -277,7 +214,6 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, '✍️ Generating email, please wait...');
 
       try {
-<<<<<<< HEAD
         let rawEmail = await generateEmail({ ...session.data, subject: finalSubject });
 
         // Insert greeting and signature
@@ -291,18 +227,6 @@ bot.on('message', async (msg) => {
         session.finalSubject = finalSubject;
 
         const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${rawEmail}`;
-=======
-        const rawEmail = await generateEmail({ ...session.data, subject: finalSubject });
-        const senderName = session.data.senderName || 'Anonymous Sender';
-        const senderRole = session.data.role || '';
-
-        const emailText = `Dear ${session.data.recipient},\n\n${rawEmail}\n\nSincerely,\n${senderName}${senderRole ? `\n${senderRole}` : ''}`.trim();
-
-        session.generatedEmail = emailText;
-        session.finalSubject = finalSubject;
-
-        const preview = `📝 *Email Preview:*\n\n*Subject:* ${finalSubject}\n*To:* ${session.data.recipient}\n\n${emailText}`;
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
         await bot.sendMessage(chatId, preview, { parse_mode: 'Markdown' });
 
         bot.sendMessage(chatId, '✅ Confirm sending email?', {
@@ -321,25 +245,9 @@ bot.on('message', async (msg) => {
   }
 });
 
-<<<<<<< HEAD
 // 🌐 Render keep-alive endpoint
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
-=======
-// Express server and healthcheck
-const app = express();
-const PORT = process.env.PORT || 3000;
-app.get('/', (_, res) => res.send('🤖 Telegram Email Bot is running!'));
-app.get('/health', (_, res) => res.send('✅ Bot is healthy'));
-app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
-
-// Self-ping Render URL every 5 minutes
-if (process.env.RENDER_EXTERNAL_URL) {
-  setInterval(() => {
-    axios.get(process.env.RENDER_EXTERNAL_URL + '/health').catch(() => {});
-  }, 5 * 60 * 1000);
-}
->>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
