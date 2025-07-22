@@ -104,7 +104,11 @@ function sendGmail(recipient, subject, body, attachments = [], tone = 'Formal', 
   const encodedMessage = Buffer.from(fullMessage).toString('base64')
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
+<<<<<<< HEAD
   const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString('utf-8'));
+=======
+  const credentials = JSON.parse(fs.readFileSync('credentials.json'));
+>>>>>>> cec5258f9ac710c175948df92096b6bc6dbd473f
   authorize(credentials, async (auth) => {
     const gmail = google.gmail({ version: 'v1', auth });
     try {
