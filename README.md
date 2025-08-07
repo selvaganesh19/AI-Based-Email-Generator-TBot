@@ -9,7 +9,7 @@ A powerful Telegram bot to generate, schedule, and send emails using **Cohere AI
 ## ✨ Features
 
 - 🤖 AI-generated emails (based on role, tone, topic)
-- 📎 Upload and attach files directly in chat     --
+- 📎 Upload and attach files directly in chat     -
 - ⏰ Schedule emails or send them instantly
 - 🔔 `/remindme` command to email yourself reminders
 - 🛡 Gmail API via OAuth2 with secure Base64 credentials
