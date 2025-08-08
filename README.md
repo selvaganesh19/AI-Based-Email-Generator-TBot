@@ -22,7 +22,7 @@ A powerful Telegram bot to generate, schedule, and send emails using **Cohere AI
 Email-Chat-Bot/
 ├── bot.js # Telegram bot logic
 ├── gmail.js # Gmail + AI integration
-├── downloads/ # Temp storage for file uploads             9
+├── downloads/ # Temp storage for file uploads             
 ├── .env # Environment config (local use)
 └── README.md # This file
 
