@@ -33,8 +33,13 @@ Email-Chat-Bot/
 
 ### 1. Clone and Install
 <<<<<<< HEAD
+<<<<<<< HEAD
 ```bash
 git clone https://github.com/selvaganesh19/Email-Chat-Bot.git
+=======
+
+git clone https://github.com/YOUR_USERNAME/Email-Chat-Bot.git
+>>>>>>> d4042a26381bab36ff97ba7e365d0980a2c1bfbf
 =======
 
 git clone https://github.com/YOUR_USERNAME/Email-Chat-Bot.git

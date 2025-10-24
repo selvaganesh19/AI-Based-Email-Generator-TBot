@@ -1,4 +1,8 @@
 node_modules
 credentials.json
 .env
+<<<<<<< HEAD
 token.json
+=======
+.token.json
+>>>>>>> d4042a26381bab36ff97ba7e365d0980a2c1bfbf
